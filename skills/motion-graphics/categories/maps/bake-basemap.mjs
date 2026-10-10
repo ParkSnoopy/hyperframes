@@ -181,12 +181,11 @@ window.__project=function(){ return {
 }; };
 </script></body></html>`;
 
-// --no-sandbox is intentional: trusted Source-time bake, headless, often root/CI; deps are version-pinned above.
+// Keep Chromium sandboxing enabled for this user-owned rendering process.
 const browser = await puppeteer.launch({
   executablePath: resolveChrome(),
   headless: true,
   args: [
-    "--no-sandbox",
     "--hide-scrollbars",
     "--use-gl=angle",
     "--use-angle=swiftshader",

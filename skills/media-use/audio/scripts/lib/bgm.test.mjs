@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import childProcess from "node:child_process";
+import { syncBuiltinESMExports } from "node:module";
 import { appendRecord } from "../../../scripts/lib/manifest.mjs";
 import {
   BGM_BED_VOLUME,
@@ -16,6 +18,30 @@ import {
 // must be a proper bed (≈ -18 dB); a silent film keeps the louder default.
 
 const dbfs = (linear) => 20 * Math.log10(linear);
+
+for (const virtualenv of [false, true]) {
+  test(`dependency installs require a virtual environment: ${virtualenv}`, (t) => {
+    const dir = mkdtempSync(join(tmpdir(), "hf-bgm-install-"));
+    const calls = [];
+    t.mock.method(childProcess, "spawnSync", (_cmd, args) => {
+      calls.push(args);
+      if (args.includes("--version")) return { status: 0, stdout: "Python 3.14", stderr: "" };
+      if (args.some((arg) => arg.includes("sys.prefix"))) return { status: virtualenv ? 0 : 1 };
+      return { status: 1 };
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+      rmSync(dir, { recursive: true, force: true });
+    });
+    const result = generateBgmDetached({
+      prompt: "test", durationS: 1, hyperframesDir: dir, anomalies: [],
+    });
+    assert.equal(result.disabled, true);
+    assert.equal(calls.some((args) => args.includes("pip")), virtualenv);
+  });
+}
 
 test("BGM under narration is a bed near -18 dB", () => {
   assert.equal(bgmDefaultVolume(true), BGM_BED_VOLUME);

@@ -41,6 +41,10 @@ function pyOk(probe) {
 // interpreter pyOk() probes — a bare `pip`/`pip3` could resolve to a
 // different Python installation than `python3` if more than one is on PATH.
 function pipInstall(deps) {
+  if (!pyOk("import sys; sys.exit(0 if sys.prefix != sys.base_prefix else 1)")) {
+    console.error("BGM dependencies require a user-owned virtual environment. Set HYPERFRAMES_PYTHON to its interpreter.");
+    return false;
+  }
   const { cmd, args } = pythonInvocation(["-m", "pip", "install", "-q", ...deps]);
   return spawnSync(cmd, args, { stdio: "ignore" }).status === 0;
 }
@@ -182,8 +186,8 @@ export function generateBgmDetached({
   return {
     disabled: true,
     reason: lyriaConfigured
-      ? `Lyria configured but google-genai uninstallable, and local MusicGen unavailable (pip install ${BGM_PY_DEPS.join(" ")})`
-      : `no Lyria key/recipe and local MusicGen deps unavailable (pip install ${BGM_PY_DEPS.join(" ")})`,
+      ? `Lyria configured but google-genai uninstallable, and local MusicGen unavailable (install ${BGM_PY_DEPS.join(" ")} in a user-owned virtual environment)`
+      : `no Lyria key/recipe and local MusicGen deps unavailable (install ${BGM_PY_DEPS.join(" ")} in a user-owned virtual environment)`,
   };
 }
 

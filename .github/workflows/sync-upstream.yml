@@ -16,11 +16,12 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: actions/checkout@v4 - Check Out Fork
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ github.token }}
-      - name: Sync skills and license
+      - name: bash - Merge Skills and License
         shell: bash
         env:
           TARGET_BRANCH: ${{ github.ref_name }}
@@ -31,12 +32,13 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch "$UPSTREAM_URL" "$UPSTREAM_BRANCH"
-          git merge --strategy=ours --no-commit --no-ff FETCH_HEAD
-          git restore --source=FETCH_HEAD --staged --worktree -- skills LICENSE
+          git merge --no-commit --no-ff FETCH_HEAD
+          git restore --source=HEAD --staged --worktree -- .github/workflows
           git rm -r --force --ignore-unmatch -- . \
             ':(top,exclude)skills' \
             ':(top,exclude,literal)LICENSE' \
             ':(top,exclude).github/workflows'
+
           test -f skills/hyperframes/SKILL.md
           test -f LICENSE
           test -f .github/workflows/sync-upstream.yml
