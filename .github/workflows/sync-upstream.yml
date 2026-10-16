@@ -32,7 +32,12 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch "$UPSTREAM_URL" "$UPSTREAM_BRANCH"
-          git merge --no-commit --no-ff FETCH_HEAD
+          if ! git merge --no-commit --no-ff FETCH_HEAD; then
+            test "$(git ls-files --unmerged)" != ""
+            git diff --name-only --diff-filter=U -z |
+              git --literal-pathspecs restore --source=FETCH_HEAD --staged --worktree \
+                --pathspec-from-file=- --pathspec-file-nul
+          fi
           git restore --source=HEAD --staged --worktree -- .github/workflows
           git rm -r --force --ignore-unmatch -- . \
             ':(top,exclude)skills' \
@@ -42,10 +47,10 @@ jobs:
           test -f skills/hyperframes/SKILL.md
           test -f LICENSE
           test -f .github/workflows/sync-upstream.yml
-          test -z "$(git ls-files -- . \
+          test "$(git ls-files -- . \
             ':(top,exclude)skills' \
             ':(top,exclude,literal)LICENSE' \
-            ':(top,exclude).github/workflows')"
+            ':(top,exclude).github/workflows')" = ""
           if git rev-parse --verify --quiet MERGE_HEAD >/dev/null || ! git diff --cached --quiet; then
             git commit -m 'chore: sync upstream skills'
             git push origin "HEAD:$TARGET_BRANCH"
